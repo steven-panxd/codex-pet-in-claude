@@ -2,6 +2,10 @@
 
 English | [简体中文](README.zh-CN.md)
 
+![Blob, the bundled pet, going through its moods: waving, working, waiting, failed, done, ready for review, idle](docs/moods.gif)
+
+<sub>Blob, the pet this plugin ships, shown with the frames the plugin draws. Your own Codex pet follows the same moods.</sub>
+
 Your Codex pet, living above the Claude Code prompt. It works while Claude works, waits when you are needed, and celebrates when a turn is done.
 
 It reads the pets already on your machine, in the Codex pet format, and draws them in the Claude Code desktop app and in terminals that show images. In any other terminal the pet is a small face of characters that follows the same moods. No pet artwork is bundled except Blob, a small original pet shown when no Codex pet is found.

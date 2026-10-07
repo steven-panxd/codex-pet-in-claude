@@ -53,6 +53,16 @@ claude plugin install codex-pet@codex-pet
 
 `/pet list` 列出找到的所有宠物，`/pet use <id>` 切换，选择会跨会话记住。
 
+## 支持 Petdex
+
+[Petdex](https://petdex.dev) 是 Codex 宠物格式的社区画廊。本插件与 Petdex 兼容：它读取装在 `~/.codex/pets` 里的宠物，并且可以用 `/pet install <名字>` 下载 Petdex 上的任意一只，名字就是宠物页面地址的最后一段。
+
+```
+/pet install boba
+```
+
+这些宠物是各位创作者的作品，通过 Petdex 分享；本插件只负责下载和绘制。感谢 Petdex 团队和贡献者提供的画廊与开放的宠物格式。
+
 ## 命令
 
 | 命令 | 作用 |

@@ -57,6 +57,16 @@ With the default setting, `auto`, the plugin picks in this order:
 
 `/pet list` names every pet found, and `/pet use <id>` switches. The choice is remembered across sessions.
 
+## Works with Petdex
+
+[Petdex](https://petdex.dev) is the community gallery of pets in the Codex format. Petdex compatibility: this plugin reads pets installed to `~/.codex/pets`, and `/pet install <name>` downloads any Petdex pet by the name in its page's address.
+
+```
+/pet install boba
+```
+
+The pets are their creators' work, shared through Petdex; this plugin only fetches and draws them. Thanks to the Petdex team and its contributors for the gallery and the open pet format.
+
 ## Commands
 
 | Command | What it does |

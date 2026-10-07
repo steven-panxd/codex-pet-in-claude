@@ -1,6 +1,6 @@
 {
   "name": "codex-pet",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Your Codex pet, living above the Claude Code prompt: it works while Claude works, waits when you are needed, and celebrates when a turn is done.",
   "author": {
     "name": "Steven Pan"
@@ -57,7 +57,7 @@
         "center",
         "right"
       ],
-      "default": "left"
+      "default": "center"
     },
     "terminalCells": {
       "type": "string",

@@ -71,7 +71,7 @@ claude plugin install codex-pet@codex-pet
 | `size` | `small`、`medium`、`large` | `medium` | 桌面端：高 72、104、156 像素。终端图片：4、6、9 行。终端色块：`small` 是 7 行，其余 13 行 |
 | `animation` | `lively`、`calm`、`still` | `calm` | `calm` 让待机、等待、待审查的宠物动一遍后休息；`still` 每个状态只画一帧 |
 | `label` | 开、关 | 开 | 宠物旁边的名字和当前状态 |
-| `align` | `left`、`center`、`right` | `left` | 宠物在输入框上方那一栏里靠左、居中还是靠右 |
+| `align` | `left`、`center`、`right` | `center` | 宠物在输入框上方那一栏里靠左、居中还是靠右 |
 | `terminalStyle` | `auto`、`picture`、`face`、`blocks` | `auto` | 终端里用什么方式画宠物，见下文 |
 | `terminalCells` | `standard`、`tall` | `standard` | 用于终端图片和色块。如果宠物在你的终端里看起来被拉高了（行距较大），设为 `tall`，宠物会画得更宽以保持比例 |
 

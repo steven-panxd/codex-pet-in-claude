@@ -67,7 +67,7 @@ const SOURCE: Record<string, string> = {
 }
 
 // The module's own state: lost on a reload, which loads the pet again.
-let settings: Settings = { pet: 'auto', size: 'medium', animation: 'calm', hasLabel: true, style: 'auto', align: 'left', hasTallCells: false }
+let settings: Settings = { pet: 'auto', size: 'medium', animation: 'calm', hasLabel: true, style: 'auto', align: 'center', hasTallCells: false }
 let pet: Pet | undefined
 let runner: string[] | undefined
 // the session's pet being loaded: a command typed at once waits on it
@@ -543,7 +543,7 @@ export const register: Register = (on, options) => {
       options.terminalStyle === 'picture' || options.terminalStyle === 'face' || options.terminalStyle === 'blocks'
         ? options.terminalStyle
         : 'auto',
-    align: options.align === 'center' || options.align === 'right' ? options.align : 'left',
+    align: options.align === 'left' || options.align === 'right' ? options.align : 'center',
     hasTallCells: options.terminalCells === 'tall',
   }
 

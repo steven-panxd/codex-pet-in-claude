@@ -75,7 +75,7 @@ Set these in `/config`, under the plugin's name.
 | `size` | `small`, `medium`, `large` | `medium` | Desktop: 72, 104 or 156 pixels tall. A terminal picture: 4, 6 or 9 rows. Terminal blocks: 7 rows for `small`, 13 otherwise |
 | `animation` | `lively`, `calm`, `still` | `calm` | `calm` lets a pet that is idle, waiting or up for review rest between movements; `still` draws one frame a mood |
 | `label` | on, off | on | The pet's name and what it is doing, beside it |
-| `align` | `left`, `center`, `right` | `left` | Where the pet stands in the band above the prompt |
+| `align` | `left`, `center`, `right` | `center` | Where the pet stands in the band above the prompt |
 | `terminalStyle` | `auto`, `picture`, `face`, `blocks` | `auto` | How the pet is drawn in a terminal. See below |
 | `terminalCells` | `standard`, `tall` | `standard` | For the terminal picture and blocks. Set to `tall` if the pet looks stretched upward in your terminal (its line spacing is roomy): it is then drawn wider to keep its shape |
 

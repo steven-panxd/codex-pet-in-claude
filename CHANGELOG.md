@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.1
+
+- The pet stands in the center of the band by default; `align` moves it.
+
 ## 0.4.0
 
 - A terminal that shows no images now draws the pet as a face of characters on one row, in the pet's main color, instead of coarse blocks.

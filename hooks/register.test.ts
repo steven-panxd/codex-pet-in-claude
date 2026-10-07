@@ -298,7 +298,7 @@ test('options: tall cells draw the pet wider', { options: { terminalCells: 'tall
   await ui.unmount()
 })
 
-test('options: the pet stands where the setting says', { options: { align: 'center' } }, async ($, on) => {
+test('the pet stands in the center unless the setting says otherwise', async ($, on) => {
   const { start } = world(on)
   await start($)
 
@@ -310,6 +310,15 @@ test('options: the pet stands where the setting says', { options: { align: 'cent
     expect(row?.props.width).toBe('100%')
     await ui.unmount()
   }
+})
+
+test('options: the pet stands where the setting says', { options: { align: 'right' } }, async ($, on) => {
+  const { start } = world(on)
+  await start($)
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  expect((await ui.find({ type: 'Box' }))?.props.justifyContent).toBe('flex-end')
+  await ui.unmount()
 })
 
 test('options: no label, and a larger pet', { options: { label: false, size: 'large' } }, async ($, on) => {

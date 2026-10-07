@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0
+
+- `/pet install <name>` downloads a pet from petdex.dev into `~/.codex/pets` and shows it.
+
 ## 0.4.1
 
 - The pet stands in the center of the band by default; `align` moves it.

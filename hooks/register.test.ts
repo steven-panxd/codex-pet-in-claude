@@ -104,7 +104,11 @@ function world(on: On, { hasNode = true, env = undefined as Record<string, strin
     const [verb, wanted = 'auto'] = e.argv.slice(2)
     const id = wanted === 'auto' ? 'tiny' : wanted
     const answer =
-      verb === 'list'
+      verb === 'install'
+        ? PETS[id] === undefined
+          ? { error: `petdex.dev has no pet named "${id}"` }
+          : { id, name: id === 'other' ? 'Other' : 'Tiny', dir: `/pets/${id}` }
+        : verb === 'list'
         ? { pets: [{ id: 'tiny', name: 'Tiny', source: 'installed' }], auto: 'tiny' }
         : PETS[id] === undefined
           ? { error: `no pet named "${id}"` }
@@ -580,6 +584,24 @@ test('on the terminal, the pill of the call that was asked ends the wait; anothe
   finish('b1')
   finish('w1')
   await Promise.all([bash, fetch])
+})
+
+test('/pet install downloads a pet by name or by its page, then shows and remembers it', async ($, on) => {
+  const { runs, start } = world(on)
+  await start($)
+
+  const missing = await $.command.run({ command: 'pet', args: 'install nope' } as never)
+  expect(missing.text).toContain('petdex.dev has no pet named "nope"')
+  expect(missing.text).toContain('Still showing Tiny')
+
+  const installed = await $.command.run({ command: 'pet', args: 'install https://petdex.dev/en/pets/Other?ref=x' } as never)
+  expect(runs).toContainEqual(['install', 'other'])
+  expect(installed.text).toBe('Installed Other from petdex.dev into ~/.codex/pets. Showing Other.')
+
+  await start($)
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  expect(await ui.find({ type: 'Text', text: 'Other' })).toBeDefined()
+  await ui.unmount()
 })
 
 test('/pet use takes no flag for an id; /pet refresh converts again', async ($, on) => {

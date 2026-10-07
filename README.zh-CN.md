@@ -43,7 +43,7 @@ claude plugin install codex-pet@codex-pet
 
 默认设置 `auto` 按这个顺序选：
 
-1. 你装在 `~/.codex/pets` 里的宠物（比如用 `npx petdex install <slug>` 装的，或在 Codex 里孵化的），
+1. 你装在 `~/.codex/pets` 里的宠物（用 `/pet install <名字>`、`npx petdex install <slug>` 装的，或在 Codex 里孵化的），
 2. Codex 桌面应用自带的默认宠物（需装有该应用，仅 macOS），
 3. Blob。
 
@@ -57,6 +57,7 @@ claude plugin install codex-pet@codex-pet
 | `/pet list` | 列出本机找到的宠物 |
 | `/pet use <id>` | 切换到某只宠物并记住 |
 | `/pet use auto` | 回到跟随 `pet` 设置 |
+| `/pet install <名字>` | 从 [petdex.dev](https://petdex.dev) 下载一只宠物到 `~/.codex/pets`，显示并记住它。名字是宠物页面地址的最后一段，也可以直接贴整个地址 |
 | `/pet refresh` | 重新转换当前宠物，忽略缓存 |
 | `/pet hide`、`/pet show` | 本次会话隐藏或恢复宠物 |
 | `/pet <mood>` | 预览某个状态 6 秒：`idle`、`running`、`waiting`、`review`、`failed`、`jumping`、`waving`、`running-left`、`running-right` |
@@ -86,7 +87,7 @@ claude plugin install codex-pet@codex-pet
 
 - 只读取 `~/.codex/pets`，以及（macOS 上）Codex 应用包里的宠物精灵图。不读 Codex 的任何其他内容：设置、会话、凭据都不碰。
 - 转换后的帧缓存在 `~/.cache/codex-pet-claude`，可以随时删除。
-- 不联网，不上传任何东西。
+- 只有在你运行 `/pet install` 时才联网，而且只访问 petdex.dev：读取该宠物的安装脚本但不执行它，只下载脚本里列出的两个文件（清单和精灵图），并校验内容。不上传任何东西，其他时候不联网。
 - Codex 应用自带的宠物是 OpenAI 的美术作品，只在你自己的机器上原地读取，本插件不包含也不分发它们。
 
 ## 宠物没出现

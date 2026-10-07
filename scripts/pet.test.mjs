@@ -8,7 +8,7 @@ import { test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import zlib from 'node:zlib'
 
-import { cleanName, convert, decode, decodePng, kindOf, readFolderPet } from './pet.mjs'
+import { cleanName, convert, decode, decodePng, install, kindOf, parseInstaller, readFolderPet } from './pet.mjs'
 
 const script = fileURLToPath(new URL('./pet.mjs', import.meta.url))
 const CELL = [16, 17] // the smallest cell the converter takes, in the contract's shape
@@ -264,6 +264,60 @@ test('the command line: list, build, the cache, and a pet that is not there', t 
   )
   assert.equal(run('build', 'blob@bundled').source, 'bundled')
   assert.equal(run('build', 'blob').source, 'installed')
+})
+
+const INSTALLER = `#!/bin/sh
+PET_DIR="$HOME/.codex/pets/boba"
+curl -fsSL -e "$PETDEX_REFERER" -o "$PET_DIR/pet.json" 'https://assets.petdex.dev/curated/boba/petjson-v2.json'
+curl -fsSL -e "$PETDEX_REFERER" -o "$PET_DIR/spritesheet.webp" 'https://assets.petdex.dev/curated/boba/sprite-v2.webp'
+`
+
+test('Petdex\'s installer is read for its two files, never run, and only petdex.dev is trusted', () => {
+  assert.deepEqual(parseInstaller(INSTALLER), {
+    manifest: 'https://assets.petdex.dev/curated/boba/petjson-v2.json',
+    sheet: 'https://assets.petdex.dev/curated/boba/sprite-v2.webp',
+  })
+  // a file from anywhere else is not taken, so there is no plan at all
+  assert.equal(parseInstaller(INSTALLER.replace('assets.petdex.dev/curated/boba/sprite', 'evil.example/sprite')), undefined)
+  assert.equal(parseInstaller(INSTALLER.replace('assets.petdex.dev/curated/boba/sprite', 'petdex.dev.evil.example/sprite')), undefined)
+  assert.equal(parseInstaller('rm -rf ~'), undefined)
+})
+
+test('install downloads a pet into the pets folder and checks what arrives', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pet-test-'))
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }))
+  const sheet = atlas(9, COUNTS)
+  const served = {
+    'https://petdex.dev/install/boba': Buffer.from(INSTALLER.replaceAll('.webp', '.png')),
+    'https://assets.petdex.dev/curated/boba/petjson-v2.json': Buffer.from(
+      JSON.stringify({ id: 'boba', displayName: 'Boba', spritesheetPath: '../../elsewhere.webp' }),
+    ),
+    'https://assets.petdex.dev/curated/boba/sprite-v2.png': sheet,
+  }
+  const asked = []
+  const get = async (url, init) => {
+    asked.push([url, init.headers.referer])
+    const body = served[url]
+
+    return { ok: body !== undefined, status: body ? 200 : 404, arrayBuffer: async () => body }
+  }
+
+  const pet = await install('boba', get, root)
+  assert.deepEqual([pet.id, pet.name], ['boba', 'Boba'])
+  assert.deepEqual(asked[0], ['https://petdex.dev/install/boba', 'https://petdex.dev/'])
+  // saved under the name it was written as, whatever the manifest claimed
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root, 'boba', 'pet.json'), 'utf8')).spritesheetPath, 'spritesheet.png')
+  assert.ok(fs.readFileSync(path.join(root, 'boba', 'spritesheet.png')).equals(sheet))
+  assert.deepEqual(fs.readdirSync(root), ['boba'])
+
+  await assert.rejects(install('nope', get, root), /petdex.dev has no pet named "nope"/)
+  await assert.rejects(install('../boba', get, root), /lowercase letters, digits and dashes/)
+  await assert.rejects(install('', get, root), /lowercase letters/)
+
+  // a spritesheet that is not an image is not installed, and the old copy stays
+  served['https://assets.petdex.dev/curated/boba/sprite-v2.png'] = Buffer.from('<svg/>')
+  await assert.rejects(install('boba', get, root), /is not a pet/)
+  assert.ok(fs.readFileSync(path.join(root, 'boba', 'spritesheet.png')).equals(sheet))
 })
 
 test('the bundled pet ships converted by this version of the script', () => {

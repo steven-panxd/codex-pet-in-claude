@@ -47,7 +47,7 @@ claude --plugin-dir /path/to/codex-pet-in-claude
 
 With the default setting, `auto`, the plugin picks in this order:
 
-1. a pet you installed in `~/.codex/pets` (for example with `npx petdex install <slug>`, or one you hatched in Codex),
+1. a pet you installed in `~/.codex/pets` (with `/pet install <name>`, with `npx petdex install <slug>`, or one you hatched in Codex),
 2. the Codex desktop app's own default pet, if the app is installed (macOS),
 3. Blob.
 
@@ -61,6 +61,7 @@ With the default setting, `auto`, the plugin picks in this order:
 | `/pet list` | Lists the pets found on this machine |
 | `/pet use <id>` | Switches to a pet and remembers it |
 | `/pet use auto` | Goes back to following the `pet` setting |
+| `/pet install <name>` | Downloads a pet from [petdex.dev](https://petdex.dev) into `~/.codex/pets`, shows it and remembers it. `<name>` is the last part of the pet's page address, or the whole address |
 | `/pet refresh` | Converts the current pet again, whatever is cached |
 | `/pet hide`, `/pet show` | Hides the pet for this session, or brings it back |
 | `/pet <mood>` | Previews a mood for 6 seconds: `idle`, `running`, `waiting`, `review`, `failed`, `jumping`, `waving`, `running-left`, `running-right` |
@@ -90,7 +91,7 @@ Set these in `/config`, under the plugin's name.
 
 - It reads `~/.codex/pets` and, on macOS, the pet spritesheets inside the Codex app's bundle. It reads nothing else of Codex's: no settings, no sessions, no credentials.
 - Converted frames are cached in `~/.cache/codex-pet-claude` (or `$XDG_CACHE_HOME/codex-pet-claude`). You may delete that folder; it is rebuilt at the next session's start, or by `/pet refresh`.
-- Nothing is sent anywhere. The plugin makes no network requests.
+- The plugin reaches the network only when you run `/pet install`, and then only petdex.dev: it reads that pet's install script without running it, and downloads the two files it names (a manifest and a spritesheet), checking that they are what they claim. Nothing is uploaded, and nothing else is ever fetched.
 - Pets from the Codex app are OpenAI's artwork. They are read in place on your own machine and are not included in or redistributed by this plugin.
 
 ## Nothing shows up

@@ -54,6 +54,7 @@ type ScriptAnswer = {
   error?: string
   dir?: string
   id?: string
+  name?: string
   /** A pet `auto` passed over because it would not convert, and why. */
   skipped?: string
   pets?: { id: string; name: string; source: string }[]
@@ -521,13 +522,31 @@ async function usePet($: EngineInterface, wanted: string): Promise<string> {
   return showing(undefined)
 }
 
+// Downloads a pet from petdex.dev by its name there, or its page's address,
+// then shows it. The script does the fetching and checks what arrives.
+async function installPet($: EngineInterface, wanted: string): Promise<string> {
+  const slug = wanted
+    .replace(/^https?:\/\/(www\.)?petdex\.dev\/([a-z-]+\/)?pets\//, '')
+    .replace(/[/?#].*$/, '')
+    .toLowerCase()
+  const installed = await runScript($, ['install', slug])
+
+  if (installed.id === undefined) {
+    return showing(installed.error ?? 'the pet could not be installed', true)
+  }
+
+  const shown = await usePet($, installed.id)
+
+  return `Installed ${installed.name ?? installed.id} from petdex.dev into ~/.codex/pets. ${shown}`
+}
+
 function usage(): string {
   const now = pet === undefined ? 'No pet is loaded.' : `Showing ${pet.name} (${SOURCE[pet.source] ?? pet.source}): ${LABEL[target]}`
 
   return [
     now,
     '',
-    'Usage: `/pet list` | `use <id|auto>` | `refresh` | `hide` | `show` | `<mood>`',
+    'Usage: `/pet list` | `use <id|auto>` | `install <name on petdex.dev>` | `refresh` | `hide` | `show` | `<mood>`',
     '',
     `Moods to preview: ${MOODS.join(', ')}`,
   ].join('\n')
@@ -550,7 +569,7 @@ export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'pet',
-      description: 'Your Codex pet: /pet list | use <id|auto> | refresh | hide | show | <mood>',
+      description: 'Your Codex pet: /pet list | use <id|auto> | install <name> | refresh | hide | show | <mood>',
     })
 
     booting = boot($)
@@ -697,6 +716,10 @@ export const register: Register = (on, options) => {
 
     if (verb === 'use' && arg !== '') {
       return { text: await usePet($, arg) }
+    }
+
+    if (verb === 'install' && arg !== '') {
+      return { text: await installPet($, arg) }
     }
 
     if (verb === 'refresh') {

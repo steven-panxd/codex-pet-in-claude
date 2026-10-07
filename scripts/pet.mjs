@@ -5,11 +5,13 @@
 //   node pet.mjs list                 the pets found, as JSON
 //   node pet.mjs build <id|auto>      convert (or reuse the cache), print where
 //   node pet.mjs build <id> --force   convert again whatever is cached
+//   node pet.mjs install <slug>       download a pet from petdex.dev into ~/.codex/pets
 //
 // No dependencies. A PNG atlas is decoded here; a WebP one is first turned
 // into a PNG by whichever of sips, dwebp, magick, ffmpeg or Pillow is present.
 // Nothing is uploaded or redistributed: a pet is read where it is installed
-// and its converted frames are kept in the user's own cache directory.
+// and its converted frames are kept in the user's own cache directory. The
+// one thing that reaches the network is `install`, and only petdex.dev.
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import fs from 'node:fs'
@@ -53,6 +55,10 @@ const OPAQUE = 128
 const MAX_SIDE = 8192 // pixels a side: an atlas is 1536 wide, this is room to spare
 const NAME_LIMIT = 24
 const DRAFT_AGE_MS = 10 * 60 * 1000 // a draft older than this was abandoned
+const PETDEX = 'https://petdex.dev'
+const MANIFEST_LIMIT = 64 * 1024
+const SHEET_LIMIT = 16 * 1024 * 1024
+const FETCH_TIMEOUT_MS = 30000
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const bundledRoot = path.join(here, '..', 'pets')
@@ -224,6 +230,96 @@ function sheetBytes(pet) {
   } finally {
     fs.closeSync(fd)
   }
+}
+
+// ---------------------------------------------------------------- installing
+
+// What Petdex's installer for a pet would download, read off its text: the
+// script itself is never run. Only its two files, and only from petdex.dev.
+function parseInstaller(text) {
+  const files = {}
+
+  for (const [, name, url] of text.matchAll(/-o\s+"\$PET_DIR\/([A-Za-z0-9._-]+)"\s+'(https:\/\/[^'\s]+)'/g)) {
+    const host = new URL(url).hostname
+
+    if (host === 'petdex.dev' || host.endsWith('.petdex.dev')) {
+      files[name] = url
+    }
+  }
+
+  const manifest = files['pet.json']
+  const sheet = Object.entries(files).find(([name]) => /^spritesheet\.(webp|png)$/.test(name))?.[1]
+
+  return manifest && sheet ? { manifest, sheet } : undefined
+}
+
+async function download(get, url, limit) {
+  const response = await get(url, {
+    headers: { referer: `${PETDEX}/` },
+    redirect: 'error',
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  })
+
+  if (!response.ok) {
+    throw new Error(`petdex.dev answered ${response.status}`)
+  }
+
+  const bytes = Buffer.from(await response.arrayBuffer())
+
+  if (bytes.length > limit) {
+    throw new Error('petdex.dev sent more than a pet may be')
+  }
+
+  return bytes
+}
+
+// Downloads the pet `slug` names on petdex.dev into the pets folder, as its
+// own installer would, checking what arrives: a manifest that is JSON and a
+// spritesheet that is an image. `get` is fetch, or a test's stand-in.
+async function install(slug, get = fetch, root = path.join(codexHome(), 'pets')) {
+  if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(slug ?? '')) {
+    throw new Error('a pet\'s name on petdex.dev is lowercase letters, digits and dashes, as in its page\'s address')
+  }
+
+  let plan
+
+  try {
+    plan = parseInstaller((await download(get, `${PETDEX}/install/${slug}`, MANIFEST_LIMIT)).toString('utf8'))
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error)
+
+    throw new Error(/answered 404/.test(reason) ? `petdex.dev has no pet named "${slug}"` : `could not reach petdex.dev: ${reason}`)
+  }
+
+  if (!plan) {
+    throw new Error(`petdex.dev has no pet named "${slug}"`)
+  }
+
+  const manifest = JSON.parse((await download(get, plan.manifest, MANIFEST_LIMIT)).toString('utf8'))
+  const sheet = await download(get, plan.sheet, SHEET_LIMIT)
+  const kind = kindOf(sheet)
+
+  if (manifest === null || typeof manifest !== 'object' || Array.isArray(manifest) || kind === undefined) {
+    throw new Error(`what petdex.dev sent for "${slug}" is not a pet`)
+  }
+
+  // written beside its place, then moved in whole over any older copy
+  const folder = path.join(root, slug)
+  const draft = `${folder}.${process.pid}.tmp`
+  fs.rmSync(draft, { recursive: true, force: true })
+  fs.mkdirSync(draft, { recursive: true })
+  fs.writeFileSync(path.join(draft, `spritesheet.${kind}`), sheet)
+  // the sheet's name is the one it was saved under, whatever the manifest says
+  fs.writeFileSync(path.join(draft, 'pet.json'), JSON.stringify({ ...manifest, spritesheetPath: `spritesheet.${kind}` }, null, 2) + '\n')
+  fs.rmSync(folder, { recursive: true, force: true })
+  fs.renameSync(draft, folder)
+  const pet = readFolderPet(folder, 'installed')
+
+  if (!pet) {
+    throw new Error(`"${slug}" was downloaded but could not be read back`)
+  }
+
+  return { id: pet.id, name: pet.name, dir: folder }
 }
 
 // ---------------------------------------------------------------- decoding
@@ -927,7 +1023,7 @@ function build(wanted, options) {
   throw new Error(first)
 }
 
-function main() {
+async function main() {
   const [command, ...rest] = process.argv.slice(2)
 
   try {
@@ -939,8 +1035,10 @@ function main() {
       const words = rest.filter((arg, index) => !arg.startsWith('-') && (out < 0 || index !== out + 1))
       const options = { out: out >= 0 ? rest[out + 1] : undefined, isForced: rest.includes('--force') }
       process.stdout.write(JSON.stringify(build(words[0] ?? 'auto', options)) + '\n')
+    } else if (command === 'install') {
+      process.stdout.write(JSON.stringify(await install(rest[0])) + '\n')
     } else {
-      process.stderr.write('usage: pet.mjs list | build <id|auto> [--force] [--out <folder>]\n')
+      process.stderr.write('usage: pet.mjs list | build <id|auto> [--force] [--out <folder>] | install <slug>\n')
       process.exitCode = 2
     }
   } catch (error) {
@@ -953,7 +1051,7 @@ function main() {
 const invoked = process.argv[1] ? fs.realpathSync(process.argv[1]) : ''
 
 if (invoked === fs.realpathSync(fileURLToPath(import.meta.url))) {
-  main()
+  await main()
 }
 
-export { cleanName, convert, decode, decodePng, kindOf, readFolderPet }
+export { cleanName, convert, decode, decodePng, install, kindOf, parseInstaller, readFolderPet }

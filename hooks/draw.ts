@@ -23,6 +23,8 @@ export type TerminalSize = 'lo' | 'tiny' | 'loTall' | 'tinyTall'
 export type Pet = PetMeta & {
   dir: string
   rgb: number[]
+  /** The pet's main color, for the face a plain terminal draws. */
+  tint: string
   /** A state's frames as SVG path markup, read when the desktop first needs them. */
   paths: Map<Mood, string[]>
 }
@@ -51,6 +53,29 @@ export const LABEL: Record<Mood, string> = {
   waiting: 'needs you',
   running: 'working…',
   review: 'ready for review',
+}
+
+const SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+
+// The pet as a face of plain characters, a few frames a mood: what a terminal
+// that shows no images draws, sharp at any size where blocks of color are not.
+// A mood's frames are all one width, so nothing beside the face shifts.
+export const FACES: Record<Mood, readonly string[]> = {
+  idle: ['(•‿•)', '(•‿•)', '(•‿•)', '(-‿-)'],
+  'running-right': ['(•_•)>', '(•_•)»'],
+  'running-left': ['<(•_•)', '«(•_•)'],
+  waving: ['(^‿^)/', '(^‿^)-'],
+  jumping: ['\\(^o^)/', ' (^o^) '],
+  failed: ['(x_x)', '(>_<)'],
+  waiting: ['(•_•)?', '(•_•) '],
+  running: SPINNER.map(mark => `${mark} (•_•)`),
+  review: ['(^‿^)*', '(^‿^) '],
+}
+
+export function faceOf(mood: Mood, at: number): string {
+  const frames = FACES[mood]
+
+  return frames[at % frames.length] ?? ''
 }
 
 const TRANSPARENT = 46 // '.'
@@ -86,10 +111,23 @@ export function petOf(text: string, dir: string): Pet | undefined {
   }
 
   const whole = meta as PetMeta
+  // the color most of its first idle frame is
+  const counts = new Map<number, number>()
+
+  for (const char of whole.terminal.lo.states.idle?.[0] ?? '') {
+    const code = char.charCodeAt(0)
+
+    if (code !== TRANSPARENT) {
+      counts.set(code, (counts.get(code) ?? 0) + 1)
+    }
+  }
+
+  const [most] = [...counts].sort((a, b) => b[1] - a[1])
 
   return {
     ...whole,
     dir,
+    tint: whole.terminal.palette[(most?.[0] ?? FIRST) - FIRST] ?? '#888888',
     rgb: whole.terminal.palette.map(hex => parseInt(hex.slice(1), 16)),
     paths: new Map(),
   }

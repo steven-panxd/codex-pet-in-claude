@@ -1,6 +1,6 @@
 {
   "name": "codex-pet",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Your Codex pet, living above the Claude Code prompt: it works while Claude works, waits when you are needed, and celebrates when a turn is done.",
   "author": {
     "name": "Steven Pan"
@@ -23,7 +23,7 @@
     "size": {
       "type": "string",
       "title": "Size",
-      "description": "How large the pet is drawn. In a terminal, small is 7 rows tall and the others 13; a terminal too short for 13 gets the small one.",
+      "description": "How large the pet is drawn. Desktop: 72, 104 or 156 pixels tall. A terminal picture: 4, 6 or 9 rows. Terminal blocks: 7 rows for small, 13 otherwise.",
       "options": [
         "small",
         "medium",
@@ -48,17 +48,6 @@
       "description": "Show the pet's name and what it is doing beside it.",
       "default": true
     },
-    "terminalImages": {
-      "type": "string",
-      "title": "Terminal images",
-      "description": "Draw the pet's own pixels in a terminal that shows images (kitty, Ghostty). auto: where the terminal says it can. on: always try. off: always half blocks.",
-      "options": [
-        "auto",
-        "on",
-        "off"
-      ],
-      "default": "auto"
-    },
     "align": {
       "type": "string",
       "title": "Position",
@@ -73,12 +62,24 @@
     "terminalCells": {
       "type": "string",
       "title": "Terminal cell shape",
-      "description": "standard: the terminal's character cells are about twice as tall as they are wide. tall: they are taller than that (roomy line spacing), which makes the pet look stretched upward; this draws it wider to compensate.",
+      "description": "For the picture and blocks in a terminal. standard: its character cells are about twice as tall as they are wide. tall: they are taller than that (roomy line spacing), which makes the pet look stretched upward; this draws it wider to compensate.",
       "options": [
         "standard",
         "tall"
       ],
       "default": "standard"
+    },
+    "terminalStyle": {
+      "type": "string",
+      "title": "In a terminal",
+      "description": "auto: the pet's own picture where the terminal shows images (kitty, Ghostty), and a small face of characters elsewhere. picture: always try the picture. face: always the face. blocks: the pet drawn in coarse blocks of color.",
+      "options": [
+        "auto",
+        "picture",
+        "face",
+        "blocks"
+      ],
+      "default": "auto"
     }
   },
   "repository": "https://github.com/steven-panxd/codex-pet-in-claude",

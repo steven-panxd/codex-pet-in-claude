@@ -4,7 +4,7 @@ English | [简体中文](README.zh-CN.md)
 
 Your Codex pet, living above the Claude Code prompt. It works while Claude works, waits when you are needed, and celebrates when a turn is done.
 
-It reads the pets already on your machine, in the Codex pet format, and draws them in Claude Code's terminal and desktop app. No pet artwork is bundled except Blob, a small original pet shown when no Codex pet is found.
+It reads the pets already on your machine, in the Codex pet format, and draws them in the Claude Code desktop app and in terminals that show images. In any other terminal the pet is a small face of characters that follows the same moods. No pet artwork is bundled except Blob, a small original pet shown when no Codex pet is found.
 
 > An unofficial community plugin. Not affiliated with, endorsed by, or sponsored by OpenAI or Anthropic. "Codex" is a trademark of OpenAI; "Claude" is a trademark of Anthropic.
 
@@ -72,18 +72,19 @@ Set these in `/config`, under the plugin's name.
 | Setting | Values | Default | |
 | --- | --- | --- | --- |
 | `pet` | `auto`, or a pet's id | `auto` | The pet shown unless `/pet use` chose another |
-| `size` | `small`, `medium`, `large` | `medium` | Desktop: 72, 104 or 156 pixels tall. Terminal: `small` is 7 rows, the others 13 |
+| `size` | `small`, `medium`, `large` | `medium` | Desktop: 72, 104 or 156 pixels tall. A terminal picture: 4, 6 or 9 rows. Terminal blocks: 7 rows for `small`, 13 otherwise |
 | `animation` | `lively`, `calm`, `still` | `calm` | `calm` lets a pet that is idle, waiting or up for review rest between movements; `still` draws one frame a mood |
 | `label` | on, off | on | The pet's name and what it is doing, beside it |
 | `align` | `left`, `center`, `right` | `left` | Where the pet stands in the band above the prompt |
-| `terminalImages` | `auto`, `on`, `off` | `auto` | Whether a terminal that shows images gets the pet's own pixels. See below |
-| `terminalCells` | `standard`, `tall` | `standard` | Set to `tall` if the pet looks stretched upward in your terminal (its line spacing is roomy): the pet is then drawn wider to keep its shape |
+| `terminalStyle` | `auto`, `picture`, `face`, `blocks` | `auto` | How the pet is drawn in a terminal. See below |
+| `terminalCells` | `standard`, `tall` | `standard` | For the terminal picture and blocks. Set to `tall` if the pet looks stretched upward in your terminal (its line spacing is roomy): it is then drawn wider to keep its shape |
 
 ## How it looks on each surface
 
 - **Desktop app**: the pet's own pixels, up to 192 by 208 a frame, in up to 32 colors a mood. A pet too detailed to fit a frame at that size is drawn at half size or with fewer colors.
-- **Terminal that shows images** (kitty, Ghostty): the pet's own pixels, 4, 6 or 9 rows tall by `size`. Experimental: it is covered by tests but has not been tried in a real kitty or Ghostty yet. It is not used through tmux or over ssh, and if the terminal turns out not to draw the picture the plugin falls back to block characters by itself. `terminalImages` set to `off` forces block characters.
-- **Any other terminal**: quadrant block characters, two pixels a cell each way: 48 by 26 pixels in 13 rows, or 24 by 14 in 7 rows when the terminal is short or `size` is `small`. Recognizable, not detailed: a cell holds only two colors. A terminal too short for either gets a one-line label.
+- **Terminal that shows images** (kitty, Ghostty): the pet's own pixels, 4, 6 or 9 rows tall by `size`. Experimental: it is covered by tests but has not been tried in a real kitty or Ghostty yet. It is not used through tmux or over ssh, and if the terminal turns out not to draw the picture the plugin falls back to the face by itself.
+- **Any other terminal**: a face of plain characters in the pet's main color, on one row, such as `(•‿•) Codex idle`. It blinks, spins while a turn runs, and changes with each mood. A character cell cannot hold enough pixels to do the pet's artwork justice, so the plugin does not try by default.
+- **Blocks**, if you want the pet's shape anyway: set `terminalStyle` to `blocks` for quadrant block characters, 48 by 26 pixels in 13 rows, or 24 by 14 in 7 rows when the terminal is short or `size` is `small`. Recognizable, coarse.
 
 ## Privacy and what it touches
 

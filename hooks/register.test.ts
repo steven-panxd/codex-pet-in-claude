@@ -144,7 +144,7 @@ function world(on: On, { hasNode = true, env = undefined as Record<string, strin
 
 async function labelOn($: Engine) {
   const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
-  const label = (await ui.find({ type: 'Text', text: /idle|working|review|done|failed|needs you|hi!/ }))?.text
+  const label = (await ui.find({ type: 'Text', text: /idle|working|review|done|failed|needs you|hi!/ }))?.text.trim()
   await ui.unmount()
 
   return label
@@ -158,7 +158,7 @@ async function sourceOn($: Engine) {
   return svg === undefined ? undefined : String(svg.props.source)
 }
 
-test('the terminal band draws the loaded pet as a Raster of half blocks', async ($, on) => {
+test('terminal blocks: the loaded pet as a Raster', { options: { terminalStyle: 'blocks' } }, async ($, on) => {
   const { start } = world(on)
   await start($)
   const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
@@ -170,7 +170,7 @@ test('the terminal band draws the loaded pet as a Raster of half blocks', async 
   await ui.unmount()
 })
 
-test('a short terminal, or the small size, gets the half-size pet; a shorter one the label', async ($, on) => {
+test('terminal blocks: a short terminal gets the half-size pet; a shorter one the label', { options: { terminalStyle: 'blocks' } }, async ($, on) => {
   const { start } = world(on)
   await start($)
   const drawn = async (maxRows: number) => {
@@ -186,6 +186,28 @@ test('a short terminal, or the small size, gets the half-size pet; a shorter one
   expect(await drawn(2)).toBe('2x2')
   expect(await drawn(1)).toBe('1x1')
   expect(await drawn(0)).toBe('label')
+})
+
+test('a plain terminal draws the pet as a face in its own color, one row, and moves it', async ($, on) => {
+  const { clock, start } = world(on)
+  await start($)
+  await clock.advance(2_500)
+  const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  const face = await ui.find({ type: 'Text', text: '(•‿•)' })
+
+  expect(face?.props.color).toBe('#ff0000')
+  expect(await ui.find({ type: 'Raster' })).toBeUndefined()
+  expect(await ui.find({ type: 'Text', text: / Tiny/ })).toBeDefined()
+
+  // a blink is the last of its idle frames
+  await clock.advance(160 * 3)
+  expect(await ui.find({ type: 'Text', text: '(-‿-)' })).toBeDefined()
+  await ui.unmount()
+
+  await $.turn.start({ text: 'hi', turnId: 't1' })
+  const working = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  expect(await working.find({ type: 'Text', text: /^. \(•_•\)$/ })).toBeDefined()
+  await working.unmount()
 })
 
 test('a terminal that shows images gets the pet as a picture, in fewer rows', async ($, on) => {
@@ -206,7 +228,7 @@ test('a terminal that shows images gets the pet as a picture, in fewer rows', as
   await ui.unmount()
 })
 
-test('a terminal that turns out not to show the picture gets half blocks instead', async ($, on) => {
+test('a terminal that turns out not to show the picture gets the face instead', async ($, on) => {
   const { clock, start } = world(on, { env: { TERM: 'xterm-kitty' }, blit: 'the Image draws its alt here' })
   await start($)
   const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
@@ -214,17 +236,17 @@ test('a terminal that turns out not to show the picture gets half blocks instead
 
   await clock.advance(1_160)
   expect(await ui.find({ type: 'Image' })).toBeUndefined()
-  expect(await ui.find({ type: 'Raster', key: 'pet' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /\(.‿.\)/ })).toBeDefined()
   await ui.unmount()
 })
 
-test('no picture through tmux, over ssh, or when switched off', async ($, on) => {
+test('no picture through tmux', async ($, on) => {
   const { start } = world(on, { env: { TERM: 'xterm-kitty', TMUX: '/tmp/tmux-1/default,1,0' } })
   await start($)
   const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
 
   expect(await ui.find({ type: 'Image' })).toBeUndefined()
-  expect(await ui.find({ type: 'Raster', key: 'pet' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /\(.‿.\)/ })).toBeDefined()
   await ui.unmount()
 })
 
@@ -266,7 +288,7 @@ test('calm: an idle pet plays through, then rests without redrawing', async ($, 
   await ui.unmount()
 })
 
-test('options: tall cells draw the pet wider', { options: { terminalCells: 'tall' } }, async ($, on) => {
+test('options: tall cells draw the pet wider', { options: { terminalCells: 'tall', terminalStyle: 'blocks' } }, async ($, on) => {
   const { start } = world(on)
   await start($)
   const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })

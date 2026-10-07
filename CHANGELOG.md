@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0
+
+- A terminal that shows no images now draws the pet as a face of characters on one row, in the pet's main color, instead of coarse blocks.
+- `terminalStyle` (`auto`, `picture`, `face`, `blocks`) replaces `terminalImages`; `blocks` keeps the old look.
+
 ## 0.3.1
 
 - Terminals without images: quadrant blocks, twice the horizontal detail of the half blocks before.

@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, Timer } from 'claude-code'
 
 import type { Mood } from '../types'
-import { LABEL, MOODS, cellsOf, frameCount, imageOf, isMood, petOf, stateOf, svgOf } from './draw'
+import { FACES, LABEL, MOODS, cellsOf, faceOf, frameCount, imageOf, isMood, petOf, stateOf, svgOf } from './draw'
 import type { Pet, TerminalSize } from './draw'
 
 const FRAME_MS = 160
@@ -43,7 +43,8 @@ type Settings = {
   size: keyof typeof DESKTOP_HEIGHT
   animation: 'lively' | 'calm' | 'still'
   hasLabel: boolean
-  images: 'auto' | 'on' | 'off'
+  /** In a terminal: the pet's picture where it can be shown and a face elsewhere, or one of them always, or blocks of color. */
+  style: 'auto' | 'picture' | 'face' | 'blocks'
   align: keyof typeof JUSTIFY
   hasTallCells: boolean
 }
@@ -66,7 +67,7 @@ const SOURCE: Record<string, string> = {
 }
 
 // The module's own state: lost on a reload, which loads the pet again.
-let settings: Settings = { pet: 'auto', size: 'medium', animation: 'calm', hasLabel: true, images: 'auto', align: 'left', hasTallCells: false }
+let settings: Settings = { pet: 'auto', size: 'medium', animation: 'calm', hasLabel: true, style: 'auto', align: 'left', hasTallCells: false }
 let pet: Pet | undefined
 let runner: string[] | undefined
 // the session's pet being loaded: a command typed at once waits on it
@@ -107,6 +108,8 @@ let terminalSize: TerminalSize = 'lo'
 // its environment says; and what the band drew last, a picture or half blocks
 let hasImages = false
 let isImageDrawn = false
+// the band drew the pet as a face of characters, redrawn a frame at a time
+let isFaceDrawn = false
 // the picture drawn has not been repainted yet: the first repaint says
 // whether the terminal took it or drew its text in its place
 let isImageUnproven = false
@@ -296,8 +299,8 @@ async function loadPet(
 // do, by their own word in the environment. Not through tmux, which passes
 // none on, nor over ssh, where the terminal cannot read this machine's files.
 async function detectImages($: EngineInterface): Promise<boolean> {
-  if (settings.images !== 'auto') {
-    return settings.images === 'on'
+  if (settings.style !== 'auto') {
+    return settings.style === 'picture'
   }
 
   const [term, program, kitty, ghostty, tmux, ssh] = await Promise.all([
@@ -366,11 +369,13 @@ async function paint($: EngineInterface, current: Pet): Promise<void> {
     const answer = await $.ui.blit({ requestId: bandId, key: 'pet', source: imageOf(current, target, frame) })
     isImageUnproven = false
 
-    // the terminal drew the picture's text in its place: half blocks from here on
+    // the terminal drew the picture's text in its place: no pictures from here on
     if (answer.deny !== undefined) {
       hasImages = false
       await update($, loads, n => n + 1)
     }
+  } else if (bandId !== undefined && isFaceDrawn) {
+    await update($, step, n => (n + 1) % 1_000_000)
   } else if (bandId !== undefined) {
     const key = `${terminalSize}:${target}:${frame}`
     const packed = cells.get(key) ?? cellsOf(current, terminalSize, target, frame)
@@ -410,7 +415,7 @@ async function advance($: EngineInterface): Promise<number> {
     await paint($, current)
   }
 
-  const count = frameCount(current, target)
+  const count = isFaceDrawn ? FACES[target].length : frameCount(current, target)
 
   if (settings.animation === 'still' || count <= 1) {
     return REST_MS
@@ -534,7 +539,10 @@ export const register: Register = (on, options) => {
     size: options.size === 'small' || options.size === 'large' ? options.size : 'medium',
     animation: options.animation === 'lively' || options.animation === 'still' ? options.animation : 'calm',
     hasLabel: options.label !== false,
-    images: options.terminalImages === 'on' || options.terminalImages === 'off' ? options.terminalImages : 'auto',
+    style:
+      options.terminalStyle === 'picture' || options.terminalStyle === 'face' || options.terminalStyle === 'blocks'
+        ? options.terminalStyle
+        : 'auto',
     align: options.align === 'center' || options.align === 'right' ? options.align : 'left',
     hasTallCells: options.terminalCells === 'tall',
   }
@@ -734,6 +742,7 @@ export const register: Register = (on, options) => {
     if (hidden || e.props.hasSurvey || current === undefined) {
       bandId = undefined
       isOnDesktop = undefined
+      isFaceDrawn = false
 
       return next(e)
     }
@@ -760,6 +769,7 @@ export const register: Register = (on, options) => {
         isImageUnproven ||= !isImageDrawn || bandId !== e.requestId
         bandId = e.requestId
         isImageDrawn = true
+        isFaceDrawn = false
 
         return (
           <Box width="100%" justifyContent={justify}>
@@ -770,6 +780,24 @@ export const register: Register = (on, options) => {
       }
 
       isImageDrawn = false
+      isFaceDrawn = settings.style !== 'blocks'
+
+      // no picture here: a face of characters, one row and sharp, rather
+      // than the pet in blocks of color too coarse to do it justice
+      if (isFaceDrawn) {
+        bandId = e.requestId
+
+        return (
+          <Box width="100%" justifyContent={justify}>
+            <Text color={current.tint} bold>
+              {faceOf(now, frame)}
+            </Text>
+            {settings.hasLabel && <Text bold> {current.name}</Text>}
+            {settings.hasLabel && <Text dimColor> {LABEL[now]}</Text>}
+          </Box>
+        )
+      }
+
       // the small size, or a terminal too short for the full one, draws the
       // half-size pet; one too short for that, the label alone
       const full: TerminalSize = settings.hasTallCells ? 'loTall' : 'lo'

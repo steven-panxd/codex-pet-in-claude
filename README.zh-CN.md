@@ -4,7 +4,7 @@
 
 把你的 Codex 宠物养在 Claude Code 的输入框上方。Claude 干活时它跟着干活，需要你时它等你，一轮结束时它跳一下庆祝。
 
-插件读取你本机已有的、Codex 宠物格式的宠物，在 Claude Code 的终端和桌面应用里把它画出来。除了一只原创的小宠物 Blob（找不到 Codex 宠物时显示），仓库里不包含任何宠物美术素材。
+插件读取你本机已有的、Codex 宠物格式的宠物，在 Claude Code 桌面应用和能显示图片的终端里把它画出来。在其他终端里，宠物是一个跟随同样状态变化的小表情。除了一只原创的小宠物 Blob（找不到 Codex 宠物时显示），仓库里不包含任何宠物美术素材。
 
 > 非官方的社区插件，与 OpenAI、Anthropic 均无关联，也未获其认可或赞助。"Codex" 是 OpenAI 的商标，"Claude" 是 Anthropic 的商标。
 
@@ -68,18 +68,19 @@ claude plugin install codex-pet@codex-pet
 | 设置 | 取值 | 默认 | 说明 |
 | --- | --- | --- | --- |
 | `pet` | `auto` 或某只宠物的 id | `auto` | 除非用 `/pet use` 另选，否则显示它 |
-| `size` | `small`、`medium`、`large` | `medium` | 桌面端：高 72、104、156 像素。终端：`small` 是 7 行，其余 13 行 |
+| `size` | `small`、`medium`、`large` | `medium` | 桌面端：高 72、104、156 像素。终端图片：4、6、9 行。终端色块：`small` 是 7 行，其余 13 行 |
 | `animation` | `lively`、`calm`、`still` | `calm` | `calm` 让待机、等待、待审查的宠物动一遍后休息；`still` 每个状态只画一帧 |
 | `label` | 开、关 | 开 | 宠物旁边的名字和当前状态 |
 | `align` | `left`、`center`、`right` | `left` | 宠物在输入框上方那一栏里靠左、居中还是靠右 |
-| `terminalImages` | `auto`、`on`、`off` | `auto` | 能显示图片的终端是否直接画宠物原图，见下文 |
-| `terminalCells` | `standard`、`tall` | `standard` | 如果宠物在你的终端里看起来被拉高了（行距较大），设为 `tall`，宠物会画得更宽以保持比例 |
+| `terminalStyle` | `auto`、`picture`、`face`、`blocks` | `auto` | 终端里用什么方式画宠物，见下文 |
+| `terminalCells` | `standard`、`tall` | `standard` | 用于终端图片和色块。如果宠物在你的终端里看起来被拉高了（行距较大），设为 `tall`，宠物会画得更宽以保持比例 |
 
 ## 各端的效果
 
 - **桌面应用**：宠物原图的像素，每帧最高 192×208，每个状态最多 32 色。
-- **能显示图片的终端**（kitty、Ghostty）：宠物原图的像素，按 `size` 占 4、6 或 9 行。实验性功能：有测试覆盖，但还没在真实的 kitty 或 Ghostty 里试过。经过 tmux 或 ssh 时不启用；如果终端实际画不出图片，插件会自动退回字符画。把 `terminalImages` 设为 `off` 可强制使用字符画。
-- **其他终端**：用四分块字符画，每个字符格横竖各 2 个像素：13 行里 48×26 像素；终端较矮或 `size` 为 `small` 时是 7 行里 24×14 像素。认得出，但不精细：一个字符格只能有两种颜色。
+- **能显示图片的终端**（kitty、Ghostty）：宠物原图的像素，按 `size` 占 4、6 或 9 行。实验性功能：有测试覆盖，但还没在真实的 kitty 或 Ghostty 里试过。经过 tmux 或 ssh 时不启用；如果终端实际画不出图片，插件会自动退回表情。
+- **其他终端**：用普通字符拼的小表情，颜色取宠物的主色，只占一行，比如 `(•‿•) Codex idle`。它会眨眼，一轮运行时带转圈，每种状态表情不同。一个字符格装不下足够的像素来还原宠物的画风，所以插件默认不硬画。
+- **色块**：如果你还是想看到宠物的形状，把 `terminalStyle` 设为 `blocks`，用四分块字符画，13 行里 48×26 像素。认得出，但粗糙。
 
 ## 隐私
 

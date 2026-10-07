@@ -18,7 +18,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import zlib from 'node:zlib'
 
-const VERSION = 5 // of the cache's format: a change rebuilds every cache
+const VERSION = 6 // of the cache's format: a change rebuilds every cache
 const COLUMNS = 8
 // the atlas's rows in order (the Codex pet contract); a row's frames are its
 // leading cells, the rest left transparent. Rows past these (v2's two rows of
@@ -439,6 +439,52 @@ function decode(bytes) {
 
 // ---------------------------------------------------------------- drawing
 
+const CRC = Uint32Array.from({ length: 256 }, (_, n) => {
+  let c = n
+
+  for (let bit = 0; bit < 8; bit += 1) {
+    c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1
+  }
+
+  return c >>> 0
+})
+
+function crc32(bytes) {
+  let crc = 0xffffffff
+
+  for (const byte of bytes) {
+    crc = CRC[(crc ^ byte) & 0xff] ^ (crc >>> 8)
+  }
+
+  return (crc ^ 0xffffffff) >>> 0
+}
+
+// RGBA bytes as a PNG file: what a terminal that shows images reads itself.
+function encodePng(rgba, width, height) {
+  const chunk = (type, body) => {
+    const out = Buffer.alloc(12 + body.length)
+    out.writeUInt32BE(body.length, 0)
+    out.write(type, 4, 'latin1')
+    body.copy(out, 8)
+    out.writeUInt32BE(crc32(out.subarray(4, 8 + body.length)), 8 + body.length)
+
+    return out
+  }
+  const header = Buffer.alloc(13)
+  header.writeUInt32BE(width, 0)
+  header.writeUInt32BE(height, 4)
+  header.set([8, 6, 0, 0, 0], 8)
+  const stride = width * 4
+  const raw = Buffer.alloc((stride + 1) * height)
+
+  for (let y = 0; y < height; y += 1) {
+    Buffer.from(rgba.buffer, rgba.byteOffset + y * stride, stride).copy(raw, y * (stride + 1) + 1)
+  }
+
+  return Buffer.concat([PNG_SIGNATURE, chunk('IHDR', header), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))])
+}
+
+
 // One cell of the atlas shrunk to `width` x `height` by area, on
 // premultiplied color so a transparent pixel's color does not bleed in.
 function shrink(image, x0, y0, cw, ch, width, height) {
@@ -758,6 +804,17 @@ function convert(pet, folder) {
     fs.writeFileSync(path.join(folder, `svg-${state}.json`), JSON.stringify(drawn.states[state]))
   }
 
+  // terminals that show images: each frame a PNG of its own, at the atlas's
+  // size and in its own colors, which the terminal reads from here itself
+  const png = { width: Math.round(cw * scale), height: Math.round(ch * scale) }
+
+  for (const state of STATES) {
+    cut[state].forEach(([x, y], at) => {
+      const frame = shrink(image, x, y, cw, ch, png.width, png.height)
+      fs.writeFileSync(path.join(folder, `png-${state}-${at}.png`), encodePng(frame, png.width, png.height))
+    })
+  }
+
   // the manifest last: its presence says the folder is whole
   fs.writeFileSync(
     path.join(folder, 'meta.json'),
@@ -768,6 +825,7 @@ function convert(pet, folder) {
       source: pet.source,
       lo,
       tiny,
+      png,
       svg: {
         width: drawn.width,
         height: drawn.height,

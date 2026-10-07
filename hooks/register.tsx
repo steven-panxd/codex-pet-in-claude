@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, Timer } from 'claude-code'
 
 import type { Mood } from '../types'
-import { LABEL, MOODS, cellsOf, frameCount, isMood, petOf, stateOf, svgOf } from './draw'
+import { LABEL, MOODS, cellsOf, frameCount, imageOf, isMood, petOf, stateOf, svgOf } from './draw'
 import type { Pet, TerminalSize } from './draw'
 
 const FRAME_MS = 160
@@ -20,6 +20,10 @@ const JUMP_MS = 5 * FRAME_MS // the jump's five frames, once through
 // with no word of them: one that ends unseen must not pin it there
 const AGENTS_CAP_MS = 15 * 60_000
 const DESKTOP_HEIGHT = { small: 72, medium: 104, large: 156 } // CSS pixels
+// a terminal that shows images: rows the picture takes, and the fewest worth drawing
+const IMAGE_ROWS = { small: 4, medium: 6, large: 9 }
+const IMAGE_MIN_ROWS = 3
+const JUSTIFY = { left: 'flex-start', center: 'center', right: 'flex-end' } as const
 // what may run scripts/pet.mjs, in the order tried: an app started from the
 // dock has a short PATH, so the usual homes of node are named too
 const RUNNERS = [['node'], ['bun'], ['/opt/homebrew/bin/node'], ['/usr/local/bin/node']]
@@ -39,6 +43,8 @@ type Settings = {
   size: keyof typeof DESKTOP_HEIGHT
   animation: 'lively' | 'calm' | 'still'
   hasLabel: boolean
+  images: 'auto' | 'on' | 'off'
+  align: keyof typeof JUSTIFY
 }
 
 // What scripts/pet.mjs prints: one line of JSON, an `error` when it failed.
@@ -59,9 +65,11 @@ const SOURCE: Record<string, string> = {
 }
 
 // The module's own state: lost on a reload, which loads the pet again.
-let settings: Settings = { pet: 'auto', size: 'medium', animation: 'calm', hasLabel: true }
+let settings: Settings = { pet: 'auto', size: 'medium', animation: 'calm', hasLabel: true, images: 'auto', align: 'left' }
 let pet: Pet | undefined
 let runner: string[] | undefined
+// the session's pet being loaded: a command typed at once waits on it
+let booting: Promise<void> | undefined
 
 // What the session's events say. The main loop's turn is running; agents its
 // last stop left in flight; and what waits on the person: the calls that are
@@ -94,6 +102,13 @@ let bandId: string | undefined
 // are read too, so its first drawing has them
 let isOnDesktop: boolean | undefined
 let terminalSize: TerminalSize = 'lo'
+// whether this terminal shows images (the kitty graphics protocol), as far as
+// its environment says; and what the band drew last, a picture or half blocks
+let hasImages = false
+let isImageDrawn = false
+// the picture drawn has not been repainted yet: the first repaint says
+// whether the terminal took it or drew its text in its place
+let isImageUnproven = false
 let ticks = 0
 let frame = 0
 let restedMs = 0
@@ -276,6 +291,27 @@ async function loadPet(
   return problem
 }
 
+// Whether the terminal the session runs in shows images: kitty and Ghostty
+// do, by their own word in the environment. Not through tmux, which passes
+// none on, nor over ssh, where the terminal cannot read this machine's files.
+async function detectImages($: EngineInterface): Promise<boolean> {
+  if (settings.images !== 'auto') {
+    return settings.images === 'on'
+  }
+
+  const [term, program, kitty, ghostty, tmux, ssh] = await Promise.all([
+    $.env.get('TERM').catch(() => undefined),
+    $.env.get('TERM_PROGRAM').catch(() => undefined),
+    $.env.get('KITTY_WINDOW_ID').catch(() => undefined),
+    $.env.get('GHOSTTY_RESOURCES_DIR').catch(() => undefined),
+    $.env.get('TMUX').catch(() => undefined),
+    $.env.get('SSH_CONNECTION').catch(() => undefined),
+  ])
+  const isCapable = term === 'xterm-kitty' || term === 'xterm-ghostty' || program === 'ghostty' || !!kitty || !!ghostty
+
+  return isCapable && !tmux && !ssh
+}
+
 async function chosenPet($: EngineInterface): Promise<string> {
   const stored = await $.store.get(STORE_PET).catch(() => undefined)
 
@@ -315,6 +351,7 @@ async function report($: EngineInterface, problem: string | undefined): Promise<
 // a first conversion, or a slow shell, holds nothing up.
 async function boot($: EngineInterface): Promise<void> {
   try {
+    hasImages = await detectImages($)
     await report($, await loadPet($, await chosenPet($), { orBundled: true }))
   } catch {
     // no pet this session: the band draws nothing
@@ -324,6 +361,15 @@ async function boot($: EngineInterface): Promise<void> {
 async function paint($: EngineInterface, current: Pet): Promise<void> {
   if (isOnDesktop === true) {
     await update($, step, n => (n + 1) % 1_000_000)
+  } else if (bandId !== undefined && isImageDrawn) {
+    const answer = await $.ui.blit({ requestId: bandId, key: 'pet', source: imageOf(current, target, frame) })
+    isImageUnproven = false
+
+    // the terminal drew the picture's text in its place: half blocks from here on
+    if (answer.deny !== undefined) {
+      hasImages = false
+      await update($, loads, n => n + 1)
+    }
   } else if (bandId !== undefined) {
     const key = `${terminalSize}:${target}:${frame}`
     const packed = cells.get(key) ?? cellsOf(current, terminalSize, target, frame)
@@ -355,6 +401,12 @@ async function advance($: EngineInterface): Promise<number> {
     await paint($, current)
 
     return FRAME_MS
+  }
+
+  // a picture just drawn is repainted once, moving or not, to hear whether
+  // the terminal took it
+  if (isImageDrawn && isImageUnproven) {
+    await paint($, current)
   }
 
   const count = frameCount(current, target)
@@ -481,6 +533,8 @@ export const register: Register = (on, options) => {
     size: options.size === 'small' || options.size === 'large' ? options.size : 'medium',
     animation: options.animation === 'lively' || options.animation === 'still' ? options.animation : 'calm',
     hasLabel: options.label !== false,
+    images: options.terminalImages === 'on' || options.terminalImages === 'off' ? options.terminalImages : 'auto',
+    align: options.align === 'center' || options.align === 'right' ? options.align : 'left',
   }
 
   on('session.start', async ($, e, next) => {
@@ -489,7 +543,7 @@ export const register: Register = (on, options) => {
       description: 'Your Codex pet: /pet list | use <id|auto> | refresh | hide | show | <mood>',
     })
 
-    void boot($)
+    booting = boot($)
     void show($, 'waving', FLASH_MS)
 
     return next(e)
@@ -623,6 +677,7 @@ export const register: Register = (on, options) => {
   }).catch(($, e, next) => next(e))
 
   on('command.run', { command: 'pet' }, async ($, e) => {
+    await booting
     const [verb = '', ...rest] = e.args.trim().split(/\s+/)
     const arg = rest.join(' ')
 
@@ -683,9 +738,36 @@ export const register: Register = (on, options) => {
 
     isOnDesktop = e.surface === 'desktop'
     const label = `${current.name}: ${LABEL[now]}`
+    // the band is as wide as the prompt: where in it the pet stands
+    const justify = JUSTIFY[settings.align]
 
     if (e.surface === 'terminal') {
-      const { Box, Raster, Text } = $.ui.resolve(e)
+      const { Box, Image, Raster, Text } = $.ui.resolve(e)
+      const beside = settings.hasLabel && (
+        <Box flexDirection="column" justifyContent="flex-end" marginLeft={1}>
+          <Text bold>{current.name}</Text>
+          <Text dimColor>{LABEL[now]}</Text>
+        </Box>
+      )
+      // a terminal that shows images gets the pet's own pixels, in fewer rows
+      const imageRows = Math.min(IMAGE_ROWS[settings.size], e.props.maxRows)
+
+      if (hasImages && imageRows >= IMAGE_MIN_ROWS) {
+        // a cell is about twice as tall as it is wide
+        const columns = Math.max(1, Math.round((imageRows * 2 * current.png.width) / current.png.height))
+        isImageUnproven ||= !isImageDrawn || bandId !== e.requestId
+        bandId = e.requestId
+        isImageDrawn = true
+
+        return (
+          <Box width="100%" justifyContent={justify}>
+            <Image key="pet" source={imageOf(current, now, frame)} columns={columns} rows={imageRows} alt={label} />
+            {beside}
+          </Box>
+        )
+      }
+
+      isImageDrawn = false
       // the small size, or a terminal too short for the full one, draws the
       // half-size pet; one too short for that, the label alone
       const rowsOf = (size: TerminalSize) => Math.ceil(current[size].height / 2)
@@ -702,19 +784,14 @@ export const register: Register = (on, options) => {
       terminalSize = size
 
       return (
-        <Box>
+        <Box width="100%" justifyContent={justify}>
           <Raster
             key="pet"
             columns={current[size].width}
             rows={rowsOf(size)}
             cells={cellsOf(current, size, now, frame)}
           />
-          {settings.hasLabel && (
-            <Box flexDirection="column" justifyContent="flex-end" marginLeft={1}>
-              <Text bold>{current.name}</Text>
-              <Text dimColor>{LABEL[now]}</Text>
-            </Box>
-          )}
+          {beside}
         </Box>
       )
     }
@@ -730,7 +807,7 @@ export const register: Register = (on, options) => {
       }
 
       return (
-        <Box>
+        <Box width="100%" justifyContent={justify}>
           <Svg
             source={source}
             alt={label}

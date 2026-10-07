@@ -75,11 +75,14 @@ Set these in `/config`, under the plugin's name.
 | `size` | `small`, `medium`, `large` | `medium` | Desktop: 72, 104 or 156 pixels tall. Terminal: `small` is 7 rows, the others 13 |
 | `animation` | `lively`, `calm`, `still` | `calm` | `calm` lets a pet that is idle, waiting or up for review rest between movements; `still` draws one frame a mood |
 | `label` | on, off | on | The pet's name and what it is doing, beside it |
+| `align` | `left`, `center`, `right` | `left` | Where the pet stands in the band above the prompt |
+| `terminalImages` | `auto`, `on`, `off` | `auto` | Whether a terminal that shows images gets the pet's own pixels. See below |
 
 ## How it looks on each surface
 
 - **Desktop app**: the pet's own pixels, up to 192 by 208 a frame, in up to 32 colors a mood. A pet too detailed to fit a frame at that size is drawn at half size or with fewer colors.
-- **Terminal**: half-block characters, 24 by 26 pixels (13 rows), or 12 by 13 (7 rows) when the terminal is short or `size` is `small`. Recognizable, not detailed. A terminal too short for either gets a one-line label.
+- **Terminal that shows images** (kitty, Ghostty): the pet's own pixels, 4, 6 or 9 rows tall by `size`. Experimental: it is covered by tests but has not been tried in a real kitty or Ghostty yet. It is not used through tmux or over ssh, and if the terminal turns out not to draw the picture the plugin falls back to half blocks by itself. `terminalImages` set to `off` forces half blocks.
+- **Any other terminal**: half-block characters, 24 by 26 pixels (13 rows), or 12 by 13 (7 rows) when the terminal is short or `size` is `small`. Recognizable, not detailed. A terminal too short for either gets a one-line label.
 
 ## Privacy and what it touches
 

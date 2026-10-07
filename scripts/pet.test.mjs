@@ -130,6 +130,14 @@ test('a 9-row and an 11-row atlas convert to the same nine states', t => {
     assert.equal(meta.lo.states.idle[0].length, 24 * 26)
     assert.equal(meta.tiny.states.idle[0].length, 12 * 13)
 
+    // each frame is also a PNG of its own, at the cell's size
+    assert.deepEqual(meta.png, { width: CELL[0], height: CELL[1] })
+    const frame = decodePng(fs.readFileSync(path.join(out, 'png-waving-3.png')))
+    assert.deepEqual([frame.width, frame.height], CELL)
+    assert.equal(frame.rgba[(8 * CELL[0] + 8) * 4 + 3], 255)
+    assert.equal(frame.rgba[3], 0)
+    assert.ok(!fs.existsSync(path.join(out, 'png-waving-4.png')))
+
     const idle = JSON.parse(fs.readFileSync(path.join(out, 'svg-idle.json'), 'utf8'))
     assert.equal(idle.length, 6)
     assert.match(idle[0], /^<path stroke="#[0-9a-f]{6}" d="M\d+ \d+h\d+/)

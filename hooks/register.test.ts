@@ -22,7 +22,7 @@ function converted(id: string, name: string): Record<string, string> {
   const frames = (state: string) => (state === 'idle' ? ['0.0.', '.0.0'] : ['0000'])
   const files: Record<string, string> = {
     'meta.json': JSON.stringify({
-      version: 5,
+      version: 6,
       id,
       name,
       source: id === 'blob' ? 'bundled' : 'installed',
@@ -37,6 +37,7 @@ function converted(id: string, name: string): Record<string, string> {
         height: 1,
         states: Object.fromEntries(STATES.map(state => [state, frames(state).map(() => '0')])),
       },
+      png: { width: 192, height: 208 },
       svg: {
         width: 2,
         height: 2,
@@ -62,11 +63,23 @@ const PETS: Record<string, Record<string, string>> = {
 const BLOB = converted('blob', 'Blob')
 
 // The world beneath the plugin: a clock, a store, the host's script and files.
-function world(on: On, { hasNode = true } = {}) {
+function world(on: On, { hasNode = true, env = undefined as Record<string, string> | undefined, blit = undefined as string | undefined } = {}) {
   const clock = mock.clock(on)
   const toasts: string[] = []
   const runs: string[][] = []
   mock.store(on)
+
+  if (env !== undefined) {
+    mock.env(on, env)
+  }
+
+  // the terminal's answer to a repaint: taken, or refused with `blit`
+  const repaints: unknown[] = []
+  on('ui.blit', (_, e) => {
+    repaints.push(e)
+
+    return { value: blit === undefined ? {} : { deny: blit } } as never
+  })
   on('command.register', () => ({ value: undefined }) as never)
   on('session.start', (_, e) => e as never)
   on('turn.start', (_, e) => ({ turnId: e.turnId }))
@@ -120,7 +133,7 @@ function world(on: On, { hasNode = true } = {}) {
     await clock.advance(0)
   }
 
-  return { clock, toasts, runs, start }
+  return { clock, toasts, runs, repaints, start }
 }
 
 async function labelOn($: Engine) {
@@ -168,6 +181,46 @@ test('a short terminal, or the small size, gets the half-size pet; a shorter one
   expect(await drawn(0)).toBe('label')
 })
 
+test('a terminal that shows images gets the pet as a picture, in fewer rows', async ($, on) => {
+  const { clock, repaints, start } = world(on, { env: { TERM: 'xterm-kitty' } })
+  await start($)
+  await clock.advance(2_500)
+  const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  const picture = await ui.find({ type: 'Image', key: 'pet' })
+
+  expect(picture?.props.source).toEqual({ file: '/cache/tiny/png-idle-0.png', format: 'png' })
+  expect(picture?.props.rows).toBe(6)
+  expect(picture?.props.columns).toBe(11)
+  expect(await ui.find({ type: 'Raster' })).toBeUndefined()
+
+  // the frames after it are swapped in by name, no pixel passing through
+  await clock.advance(160)
+  expect(repaints.at(-1)).toMatchObject({ key: 'pet', source: { file: '/cache/tiny/png-idle-1.png', format: 'png' } })
+  await ui.unmount()
+})
+
+test('a terminal that turns out not to show the picture gets half blocks instead', async ($, on) => {
+  const { clock, start } = world(on, { env: { TERM: 'xterm-kitty' }, blit: 'the Image draws its alt here' })
+  await start($)
+  const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  expect(await ui.find({ type: 'Image' })).toBeDefined()
+
+  await clock.advance(1_160)
+  expect(await ui.find({ type: 'Image' })).toBeUndefined()
+  expect(await ui.find({ type: 'Raster', key: 'pet' })).toBeDefined()
+  await ui.unmount()
+})
+
+test('no picture through tmux, over ssh, or when switched off', async ($, on) => {
+  const { start } = world(on, { env: { TERM: 'xterm-kitty', TMUX: '/tmp/tmux-1/default,1,0' } })
+  await start($)
+  const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
+
+  expect(await ui.find({ type: 'Image' })).toBeUndefined()
+  expect(await ui.find({ type: 'Raster', key: 'pet' })).toBeDefined()
+  await ui.unmount()
+})
+
 test('the desktop band draws one frame as a plain image and steps to the next', async ($, on) => {
   const { clock, start } = world(on)
   await start($)
@@ -204,6 +257,20 @@ test('calm: an idle pet plays through, then rests without redrawing', async ($, 
   }
 
   await ui.unmount()
+})
+
+test('options: the pet stands where the setting says', { options: { align: 'center' } }, async ($, on) => {
+  const { start } = world(on)
+  await start($)
+
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount({ ...BAND, surface })
+    const row = await ui.find({ type: 'Box' })
+
+    expect(row?.props.justifyContent).toBe('center')
+    expect(row?.props.width).toBe('100%')
+    await ui.unmount()
+  }
 })
 
 test('options: no label, and a larger pet', { options: { label: false, size: 'large' } }, async ($, on) => {

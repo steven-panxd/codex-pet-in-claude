@@ -11,6 +11,8 @@ export type PetMeta = {
   lo: Frames & { palette: string[] }
   // the same on lo's palette at half the size, for a short terminal
   tiny: Frames
+  // a terminal that shows images: each frame a PNG file beside the manifest
+  png: { width: number; height: number }
   // desktop: how many frames each state has; their markup is a file a state
   svg: { width: number; height: number; colors: number; frames: Partial<Record<Mood, number>> }
 }
@@ -26,7 +28,7 @@ export type Pet = PetMeta & {
   paths: Map<Mood, string[]>
 }
 
-export const META_VERSION = 5
+export const META_VERSION = 6
 
 export const MOODS: readonly Mood[] = [
   'idle',
@@ -77,6 +79,8 @@ export function petOf(text: string, dir: string): Pet | undefined {
     Array.isArray(meta.lo?.palette) &&
     (meta.lo?.states?.idle?.length ?? 0) > 0 &&
     (meta.tiny?.states?.idle?.length ?? 0) > 0 &&
+    (meta.png?.width ?? 0) > 0 &&
+    (meta.png?.height ?? 0) > 0 &&
     (meta.svg?.frames?.idle ?? 0) > 0
 
   if (!isWhole) {
@@ -134,6 +138,14 @@ export function cellsOf(pet: Pet, size: TerminalSize, mood: Mood, at: number): s
   }
 
   return new Uint8Array(words.buffer).toBase64()
+}
+
+// One frame as the PNG file the converter left in the cache, for a terminal
+// that shows images: it reads the file itself, so no pixel crosses the plugin.
+export function imageOf(pet: Pet, mood: Mood, at: number): { file: string; format: 'png' } {
+  const state = stateOf(pet, mood)
+
+  return { file: `${pet.dir}/png-${state}-${at % frameCount(pet, mood)}.png`, format: 'png' }
 }
 
 // One desktop frame as an SVG of its own, or undefined until the state's

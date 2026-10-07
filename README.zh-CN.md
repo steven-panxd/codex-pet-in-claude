@@ -71,11 +71,14 @@ claude plugin install codex-pet@codex-pet
 | `size` | `small`、`medium`、`large` | `medium` | 桌面端：高 72、104、156 像素。终端：`small` 是 7 行，其余 13 行 |
 | `animation` | `lively`、`calm`、`still` | `calm` | `calm` 让待机、等待、待审查的宠物动一遍后休息；`still` 每个状态只画一帧 |
 | `label` | 开、关 | 开 | 宠物旁边的名字和当前状态 |
+| `align` | `left`、`center`、`right` | `left` | 宠物在输入框上方那一栏里靠左、居中还是靠右 |
+| `terminalImages` | `auto`、`on`、`off` | `auto` | 能显示图片的终端是否直接画宠物原图，见下文 |
 
 ## 各端的效果
 
 - **桌面应用**：宠物原图的像素，每帧最高 192×208，每个状态最多 32 色。
-- **终端**：用半块字符画，24×26 像素（13 行）；终端较矮或 `size` 为 `small` 时是 12×13（7 行）。认得出，但不精细。
+- **能显示图片的终端**（kitty、Ghostty）：宠物原图的像素，按 `size` 占 4、6 或 9 行。实验性功能：有测试覆盖，但还没在真实的 kitty 或 Ghostty 里试过。经过 tmux 或 ssh 时不启用；如果终端实际画不出图片，插件会自动退回半块字符。把 `terminalImages` 设为 `off` 可强制使用半块字符。
+- **其他终端**：用半块字符画，24×26 像素（13 行）；终端较矮或 `size` 为 `small` 时是 12×13（7 行）。认得出，但不精细。
 
 ## 隐私
 

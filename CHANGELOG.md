@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+- Terminals that show images (kitty, Ghostty) draw the pet's own pixels, in fewer rows. Experimental; half blocks remain the fallback.
+- New settings: `align` (left, center, right) and `terminalImages`.
+- `/pet` typed right at startup waits for the pet to load.
+
 ## 0.2.0
 
 - Pets are read from this machine at run time: `~/.codex/pets`, then the Codex app's own, then the bundled Blob.

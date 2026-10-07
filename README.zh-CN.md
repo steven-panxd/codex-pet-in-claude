@@ -2,9 +2,9 @@
 
 [English](README.md) | 简体中文
 
-![自带宠物 Blob 的各个状态：挥手、工作中、等你、失败、完成、待审查、待机](docs/moods.gif)
+![Codex 宠物在 Claude Code 输入框上方的各个状态：挥手、工作中、等你、失败、完成、待审查、待机](docs/moods.gif)
 
-<sub>图中是插件自带的宠物 Blob，用的是插件实际绘制的帧。你自己的 Codex 宠物会跟随同样的状态。</sub>
+<sub>图中是 Codex 应用自带的宠物 Codex，用的是本插件从你本机那份素材画出来的帧。宠物的美术属于 OpenAI：放在这里只为展示插件的效果，它不是插件的一部分，也不在本仓库的许可范围内。</sub>
 
 把你的 Codex 宠物养在 Claude Code 的输入框上方。Claude 干活时它跟着干活，需要你时它等你，一轮结束时它跳一下庆祝。
 
@@ -119,4 +119,4 @@ claude plugin install codex-pet@codex-pet
 
 ## 许可
 
-代码和 Blob 均为 MIT。见 [LICENSE](LICENSE)。
+代码和 Blob 均为 MIT，见 [LICENSE](LICENSE)。页面顶部动图里的 Codex 宠物属于 OpenAI，不在此许可范围内。

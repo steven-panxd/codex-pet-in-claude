@@ -2,9 +2,9 @@
 
 English | [简体中文](README.zh-CN.md)
 
-![Blob, the bundled pet, going through its moods: waving, working, waiting, failed, done, ready for review, idle](docs/moods.gif)
+![The Codex pet going through its moods above the Claude Code prompt: waving, working, waiting, failed, done, ready for review, idle](docs/moods.gif)
 
-<sub>Blob, the pet this plugin ships, shown with the frames the plugin draws. Your own Codex pet follows the same moods.</sub>
+<sub>Codex, the Codex app's own pet, with the frames this plugin draws from the copy on your machine. The pet's artwork is OpenAI's: it appears here to show what the plugin does, is not part of the plugin, and is not covered by this repository's license.</sub>
 
 Your Codex pet, living above the Claude Code prompt. It works while Claude works, waits when you are needed, and celebrates when a turn is done.
 
@@ -141,4 +141,4 @@ claude plugin test .
 
 ## License
 
-MIT, for the code and for Blob. See [LICENSE](LICENSE).
+MIT, for the code and for Blob. See [LICENSE](LICENSE). The animation at the top of this page shows OpenAI's Codex pet and is not covered by it.

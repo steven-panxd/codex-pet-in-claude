@@ -1,0 +1,14 @@
+{
+  "name": "codex-pet",
+  "description": "A Codex pet that lives above the Claude Code prompt.",
+  "owner": {
+    "name": "Steven Pan"
+  },
+  "plugins": [
+    {
+      "name": "codex-pet",
+      "source": "./",
+      "description": "Your Codex pet, living above the Claude Code prompt: it works while Claude works, waits when you are needed, and celebrates when a turn is done."
+    }
+  ]
+}

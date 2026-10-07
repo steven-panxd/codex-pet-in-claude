@@ -1,0 +1,54 @@
+{
+  "name": "codex-pet",
+  "version": "0.2.0",
+  "description": "Your Codex pet, living above the Claude Code prompt: it works while Claude works, waits when you are needed, and celebrates when a turn is done.",
+  "author": {
+    "name": "Steven Pan"
+  },
+  "license": "MIT",
+  "keywords": [
+    "pet",
+    "codex",
+    "companion",
+    "status"
+  ],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "pet": {
+      "type": "string",
+      "title": "Pet",
+      "description": "Which pet to show: auto (an installed Codex pet, else the Codex app's own, else the bundled Blob), or a pet's id as /pet list names it. /pet use <id> overrides this.",
+      "default": "auto"
+    },
+    "size": {
+      "type": "string",
+      "title": "Size",
+      "description": "How large the pet is drawn. In a terminal, small is 7 rows tall and the others 13; a terminal too short for 13 gets the small one.",
+      "options": [
+        "small",
+        "medium",
+        "large"
+      ],
+      "default": "medium"
+    },
+    "animation": {
+      "type": "string",
+      "title": "Animation",
+      "description": "lively: always moving. calm: a pet that is idle, waiting or up for review rests between movements. still: one frame a mood.",
+      "options": [
+        "lively",
+        "calm",
+        "still"
+      ],
+      "default": "calm"
+    },
+    "label": {
+      "type": "boolean",
+      "title": "Label",
+      "description": "Show the pet's name and what it is doing beside it.",
+      "default": true
+    }
+  },
+  "repository": "https://github.com/steven-panxd/codex-pet-in-claude",
+  "homepage": "https://github.com/steven-panxd/codex-pet-in-claude"
+}

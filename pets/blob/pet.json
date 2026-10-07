@@ -1,0 +1,6 @@
+{
+  "id": "blob",
+  "displayName": "Blob",
+  "description": "A small teal blob: the pet this plugin ships, shown when no Codex pet is found.",
+  "spritesheetPath": "spritesheet.png"
+}

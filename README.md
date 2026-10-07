@@ -1,5 +1,7 @@
 # Codex Pet for Claude Code
 
+English | [简体中文](README.zh-CN.md)
+
 Your Codex pet, living above the Claude Code prompt. It works while Claude works, waits when you are needed, and celebrates when a turn is done.
 
 It reads the pets already on your machine, in the Codex pet format, and draws them in Claude Code's terminal and desktop app. No pet artwork is bundled except Blob, a small original pet shown when no Codex pet is found.
@@ -21,7 +23,7 @@ It reads the pets already on your machine, in the Codex pet format, and draws th
 
 ## Requirements
 
-- Claude Code 2.1.289 or later, with plugin function hooks (an early-access API: it may change between releases).
+- Claude Code 2.1.289 or later, with plugin function hooks. This is an early-access API that Anthropic is rolling out gradually: it may change between releases, and **it may not be switched on for your account yet**. See [Nothing shows up](#nothing-shows-up).
 - Node.js 18 or later (or Bun) on your `PATH`, to convert a pet's spritesheet. Without it the plugin still runs and shows Blob.
 - For a pet whose spritesheet is WebP (most are), one of: macOS (its `sips` is used), `dwebp` from libwebp, ImageMagick, `ffmpeg`, or Python with Pillow. PNG spritesheets need nothing.
 
@@ -85,6 +87,20 @@ Set these in `/config`, under the plugin's name.
 - Converted frames are cached in `~/.cache/codex-pet-claude` (or `$XDG_CACHE_HOME/codex-pet-claude`). You may delete that folder; it is rebuilt at the next session's start, or by `/pet refresh`.
 - Nothing is sent anywhere. The plugin makes no network requests.
 - Pets from the Codex app are OpenAI's artwork. They are read in place on your own machine and are not included in or redistributed by this plugin.
+
+## Nothing shows up
+
+The plugin installs on any account, but its pet only appears where Claude Code runs plugin function hooks, which is behind a gradual rollout (seen in Claude Code 2.1.292).
+
+1. Update Claude Code, then restart it.
+2. Check whether the rollout has reached your account. This prints `true` when it has:
+
+   ```bash
+   grep -o '"tengu_plugin_hooks_modules": *[a-z]*' ~/.claude.json
+   ```
+
+3. If it prints `false` or nothing, the plugin cannot draw yet on your account, and nothing in this repository can change that. Star or watch the repository to try again later.
+4. If it prints `true` and there is still no pet, run `/pet`. A reply means the plugin is loaded: try `/pet show`, then `/pet list`. No reply means it is not installed or not enabled: check `claude plugin list`.
 
 ## Known limits
 

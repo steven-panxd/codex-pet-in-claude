@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1
+
+- Terminals without images: quadrant blocks, twice the horizontal detail of the half blocks before.
+- New setting `terminalCells`, for terminals whose roomy line spacing made the pet look stretched.
+
 ## 0.3.0
 
 - Terminals that show images (kitty, Ghostty) draw the pet's own pixels, in fewer rows. Experimental; half blocks remain the fallback.

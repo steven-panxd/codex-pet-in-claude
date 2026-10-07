@@ -17,35 +17,41 @@ const BAND = {
 
 const STATES = ['idle', 'running-right', 'running-left', 'waving', 'jumping', 'failed', 'waiting', 'running', 'review']
 
-// A converted pet as scripts/pet.mjs writes one: 2x2 pixels, two idle frames.
+// A converted pet as scripts/pet.mjs writes one: two idle frames, and in a
+// terminal 2 columns by 2 rows at full size, 1 by 1 at half.
 function converted(id: string, name: string): Record<string, string> {
-  const frames = (state: string) => (state === 'idle' ? ['0.0.', '.0.0'] : ['0000'])
+  const count = (state: string) => (state === 'idle' ? 2 : 1)
+  const sized = (columns: number, rows: number) => ({
+    columns,
+    rows,
+    states: Object.fromEntries(
+      STATES.map(state => [state, Array.from({ length: count(state) }, (_, at) => (at === 0 ? '0.' : '.0').repeat(columns * rows * 2)),
+      ]),
+    ),
+  })
   const files: Record<string, string> = {
     'meta.json': JSON.stringify({
-      version: 6,
+      version: 7,
       id,
       name,
       source: id === 'blob' ? 'bundled' : 'installed',
-      lo: {
-        width: 2,
-        height: 2,
+      terminal: {
         palette: ['#ff0000'],
-        states: Object.fromEntries(STATES.map(state => [state, frames(state)])),
-      },
-      tiny: {
-        width: 1,
-        height: 1,
-        states: Object.fromEntries(STATES.map(state => [state, frames(state).map(() => '0')])),
+        lo: sized(2, 2),
+        tiny: sized(1, 1),
+        loTall: sized(3, 2),
+        tinyTall: sized(2, 1),
       },
       png: { width: 192, height: 208 },
       svg: {
         width: 2,
         height: 2,
         colors: 1,
-        frames: Object.fromEntries(STATES.map(state => [state, frames(state).length])),
+        frames: Object.fromEntries(STATES.map(state => [state, count(state)])),
       },
     }),
   }
+  const frames = (state: string) => Array.from({ length: count(state) })
 
   for (const state of STATES) {
     files[`svg-${state}.json`] = JSON.stringify(
@@ -159,7 +165,7 @@ test('the terminal band draws the loaded pet as a Raster of half blocks', async 
   const pet = await ui.find({ type: 'Raster', key: 'pet' })
 
   expect(pet?.props.columns).toBe(2)
-  expect(pet?.props.rows).toBe(1)
+  expect(pet?.props.rows).toBe(2)
   expect(await ui.find({ type: 'Text', text: 'Tiny' })).toBeDefined()
   await ui.unmount()
 })
@@ -176,8 +182,9 @@ test('a short terminal, or the small size, gets the half-size pet; a shorter one
     return pet === undefined ? (label === undefined ? 'nothing' : 'label') : `${pet.props.columns}x${pet.props.rows}`
   }
 
-  // the fixture's full size is 2 columns by 1 row, its half size 1 by 1
-  expect(await drawn(1)).toBe('2x1')
+  // the fixture's full size is 2 columns by 2 rows, its half size 1 by 1
+  expect(await drawn(2)).toBe('2x2')
+  expect(await drawn(1)).toBe('1x1')
   expect(await drawn(0)).toBe('label')
 })
 
@@ -256,6 +263,16 @@ test('calm: an idle pet plays through, then rests without redrawing', async ($, 
     expect(String((await ui.find({ type: 'Svg' }))?.props.source)).toBe(resting)
   }
 
+  await ui.unmount()
+})
+
+test('options: tall cells draw the pet wider', { options: { terminalCells: 'tall' } }, async ($, on) => {
+  const { start } = world(on)
+  await start($)
+  const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
+  const pet = await ui.find({ type: 'Raster', key: 'pet' })
+
+  expect([pet?.props.columns, pet?.props.rows]).toEqual([3, 2])
   await ui.unmount()
 })
 

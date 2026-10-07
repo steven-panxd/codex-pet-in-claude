@@ -125,10 +125,14 @@ test('a 9-row and an 11-row atlas convert to the same nine states', t => {
     assert.equal(meta.name, `ROWS${rows}`)
     assert.deepEqual(Object.values(meta.svg.frames), COUNTS)
     assert.deepEqual([meta.svg.width, meta.svg.height], CELL)
-    assert.deepEqual([meta.lo.width, meta.lo.height, meta.tiny.width, meta.tiny.height], [24, 26, 12, 13])
-    assert.equal(meta.lo.states.waving.length, 4)
-    assert.equal(meta.lo.states.idle[0].length, 24 * 26)
-    assert.equal(meta.tiny.states.idle[0].length, 12 * 13)
+    assert.deepEqual(
+      Object.fromEntries(['lo', 'tiny', 'loTall', 'tinyTall'].map(size => [size, [meta.terminal[size].columns, meta.terminal[size].rows]])),
+      { lo: [24, 13], tiny: [12, 7], loTall: [29, 13], tinyTall: [14, 7] },
+    )
+    assert.equal(meta.terminal.lo.states.waving.length, 4)
+    // two pixels a cell each way
+    assert.equal(meta.terminal.lo.states.idle[0].length, 48 * 26)
+    assert.equal(meta.terminal.tinyTall.states.idle[0].length, 28 * 14)
 
     // each frame is also a PNG of its own, at the cell's size
     assert.deepEqual(meta.png, { width: CELL[0], height: CELL[1] })

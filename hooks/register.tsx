@@ -45,6 +45,7 @@ type Settings = {
   hasLabel: boolean
   images: 'auto' | 'on' | 'off'
   align: keyof typeof JUSTIFY
+  hasTallCells: boolean
 }
 
 // What scripts/pet.mjs prints: one line of JSON, an `error` when it failed.
@@ -65,7 +66,7 @@ const SOURCE: Record<string, string> = {
 }
 
 // The module's own state: lost on a reload, which loads the pet again.
-let settings: Settings = { pet: 'auto', size: 'medium', animation: 'calm', hasLabel: true, images: 'auto', align: 'left' }
+let settings: Settings = { pet: 'auto', size: 'medium', animation: 'calm', hasLabel: true, images: 'auto', align: 'left', hasTallCells: false }
 let pet: Pet | undefined
 let runner: string[] | undefined
 // the session's pet being loaded: a command typed at once waits on it
@@ -535,6 +536,7 @@ export const register: Register = (on, options) => {
     hasLabel: options.label !== false,
     images: options.terminalImages === 'on' || options.terminalImages === 'off' ? options.terminalImages : 'auto',
     align: options.align === 'center' || options.align === 'right' ? options.align : 'left',
+    hasTallCells: options.terminalCells === 'tall',
   }
 
   on('session.start', async ($, e, next) => {
@@ -754,7 +756,7 @@ export const register: Register = (on, options) => {
 
       if (hasImages && imageRows >= IMAGE_MIN_ROWS) {
         // a cell is about twice as tall as it is wide
-        const columns = Math.max(1, Math.round((imageRows * 2 * current.png.width) / current.png.height))
+        const columns = Math.max(1, Math.round((imageRows * (settings.hasTallCells ? 2.4 : 2) * current.png.width) / current.png.height))
         isImageUnproven ||= !isImageDrawn || bandId !== e.requestId
         bandId = e.requestId
         isImageDrawn = true
@@ -770,9 +772,10 @@ export const register: Register = (on, options) => {
       isImageDrawn = false
       // the small size, or a terminal too short for the full one, draws the
       // half-size pet; one too short for that, the label alone
-      const rowsOf = (size: TerminalSize) => Math.ceil(current[size].height / 2)
-      const fits = (size: TerminalSize) => e.props.maxRows >= rowsOf(size)
-      const size = settings.size !== 'small' && fits('lo') ? 'lo' : fits('tiny') ? 'tiny' : undefined
+      const full: TerminalSize = settings.hasTallCells ? 'loTall' : 'lo'
+      const half: TerminalSize = settings.hasTallCells ? 'tinyTall' : 'tiny'
+      const fits = (one: TerminalSize) => e.props.maxRows >= current.terminal[one].rows
+      const size = settings.size !== 'small' && fits(full) ? full : fits(half) ? half : undefined
 
       if (size === undefined) {
         bandId = undefined
@@ -787,8 +790,8 @@ export const register: Register = (on, options) => {
         <Box width="100%" justifyContent={justify}>
           <Raster
             key="pet"
-            columns={current[size].width}
-            rows={rowsOf(size)}
+            columns={current.terminal[size].columns}
+            rows={current.terminal[size].rows}
             cells={cellsOf(current, size, now, frame)}
           />
           {beside}

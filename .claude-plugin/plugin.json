@@ -1,6 +1,6 @@
 {
   "name": "codex-pet",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Your Codex pet, living above the Claude Code prompt: it works while Claude works, waits when you are needed, and celebrates when a turn is done.",
   "author": {
     "name": "Steven Pan"
@@ -69,6 +69,16 @@
         "right"
       ],
       "default": "left"
+    },
+    "terminalCells": {
+      "type": "string",
+      "title": "Terminal cell shape",
+      "description": "standard: the terminal's character cells are about twice as tall as they are wide. tall: they are taller than that (roomy line spacing), which makes the pet look stretched upward; this draws it wider to compensate.",
+      "options": [
+        "standard",
+        "tall"
+      ],
+      "default": "standard"
     }
   },
   "repository": "https://github.com/steven-panxd/codex-pet-in-claude",

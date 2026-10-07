@@ -18,7 +18,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import zlib from 'node:zlib'
 
-const VERSION = 6 // of the cache's format: a change rebuilds every cache
+const VERSION = 7 // of the cache's format: a change rebuilds every cache
 const COLUMNS = 8
 // the atlas's rows in order (the Codex pet contract); a row's frames are its
 // leading cells, the rest left transparent. Rows past these (v2's two rows of
@@ -35,8 +35,17 @@ const STATES = [
   'review',
 ]
 const CELL = [192, 208] // the contract's cell, and the most the desktop draws
-const LO = [24, 26] // terminal: two pixels a cell, as half blocks (13 rows)
-const TINY = [12, 13] // a short terminal, or the small size (7 rows)
+// terminal: a cell is drawn as 2x2 pixels (quadrant blocks), so a pet of C
+// columns by R rows is 2C by 2R pixels. Two heights (13 rows, and 7 for a
+// short terminal) at two cell shapes: `standard` cells are twice as tall as
+// they are wide, `tall` ones 2.4 times (a terminal with roomy line spacing),
+// which takes more columns to keep the pet's own shape.
+const TERMINAL = {
+  lo: [24, 13],
+  tiny: [12, 7],
+  loTall: [29, 13],
+  tinyTall: [14, 7],
+}
 const LO_COLORS = 32
 const SVG_LIMIT = 131072 - 400 // characters an Svg element takes, less its wrapper
 const SVG_COLORS = [32, 24, 16, 12]
@@ -743,21 +752,22 @@ function convert(pet, folder) {
     throw new Error('the atlas has no idle frame')
   }
 
-  // terminal: every state on one palette, at two sizes
-  const shrunk = ([width, height]) =>
+  // terminal: every state on one palette, at each size and cell shape
+  const shrunk = (width, height) =>
     Object.fromEntries(STATES.map(state => [state, cut[state].map(([x, y]) => shrink(image, x, y, cw, ch, width, height))]))
-  const small = shrunk(LO)
-  const smaller = shrunk(TINY)
-  const loPalette = paletteOf(Object.values(small).flat(), LO_COLORS)
-  const indexed = (frames, [width, height]) => ({
-    width,
-    height,
-    states: Object.fromEntries(
-      STATES.map(state => [state, frames[state].map(frame => indexedOf(frame, width, height, loPalette))]),
-    ),
-  })
-  const lo = { palette: loPalette.hexes, ...indexed(small, LO) }
-  const tiny = indexed(smaller, TINY)
+  const sized = Object.fromEntries(Object.entries(TERMINAL).map(([name, [columns, rows]]) => [name, shrunk(columns * 2, rows * 2)]))
+  const loPalette = paletteOf(Object.values(sized.lo).flat(), LO_COLORS)
+  const terminal = { palette: loPalette.hexes }
+
+  for (const [name, [columns, rows]] of Object.entries(TERMINAL)) {
+    terminal[name] = {
+      columns,
+      rows,
+      states: Object.fromEntries(
+        STATES.map(state => [state, sized[name][state].map(frame => indexedOf(frame, columns * 2, rows * 2, loPalette))]),
+      ),
+    }
+  }
 
   // desktop: a state a file, at the sharpest size and palette at which every
   // frame of the pet fits an Svg element of its own
@@ -823,8 +833,7 @@ function convert(pet, folder) {
       id: pet.id,
       name: pet.name,
       source: pet.source,
-      lo,
-      tiny,
+      terminal,
       png,
       svg: {
         width: drawn.width,
